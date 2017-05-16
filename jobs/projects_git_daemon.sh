@@ -21,12 +21,16 @@
 #
 
 shell_used="${SHELL##*/}"
+shell_used=${shell_used:-'bash'}
 echo "## shell used: ${shell_used}"
 [[ -f ~/.${shell_used}rc ]] && source ~/.${shell_used}rc &> /dev/null
 [[ -f ~/.${shell_used}_profile ]] && source ~/.${shell_used}_profile &> /dev/null
 
+execute_mode="${1:-'debug'}"
+
 function_auto_git_commit() {
     local project_path="$1"
+    local execute_mode="$2"
 
     echo -e "\n## project name: ${project_path##*/}\n"
     if [[ -d "${project_path}" && -d "${project_path}/.git" ]];
@@ -39,9 +43,12 @@ function_auto_git_commit() {
         then
             commit_messasge="auto commit by crontab job ${timestamp}"
 
-            git add .
-            git commit -a -m "${commit_messasge}"
-            git push origin "${current_branch}"
+            if [[ "${execute_mode}" = "git:push" ]];
+            then
+                git add .
+                git commit -a -m "${commit_messasge}"
+                git push origin "${current_branch}"
+            fi
 
             echo "${project_path}@${current_branch} ${commit_messasge}"
         else
@@ -59,14 +66,15 @@ then
     #
     # ls ~/Work | xargs -I pathname echo "/Users/$(whoami)/Work/pathname" > .projects.conf
     #
-    cat "${conf_file}" | while read project_path; do
-        function_auto_git_commit "${project_path}"
+    cat "${conf_file}" | while read project_path;
+    do
+        function_auto_git_commit "${project_path}" "${execute_mode}"
     done
 else
     project_folder="/Users/$(whoami)/Work"
     for project_name in $(ls ${project_folder});
     do
-        function_auto_git_commit "${project_folder}/${project_name}"
+        function_auto_git_commit "${project_folder}/${project_name}" "${execute_mode}"
     done
 fi
 
